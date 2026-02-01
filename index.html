@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Japan Safety SOS Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10263/10263336.png">
+    <meta name="theme-color" content="#d32f2f">
+    <style>
+        :root { 
+            --emergency-red: #ff3b30; 
+            --warning-yellow: #ffcc00; 
+            --line-green: #34c759; 
+            --install-blue: #007aff; 
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+        }
+
+        body { 
+            margin: 0; 
+            background: linear-gradient(135deg, #121212 0%, #1a1a2e 100%);
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* شريط التثبيت المطور والأكبر */
+        #installBtn { 
+            display: none; 
+            width: 100%; 
+            padding: 22px 10px; 
+            background: var(--install-blue); 
+            color: white; 
+            border: none; 
+            font-weight: 900; 
+            font-size: 1.2rem;
+            cursor: pointer; 
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            position: sticky; 
+            top: 0; 
+            z-index: 2000; /* أعلى من كل شيء لضمان عدم الاختفاء */
+            letter-spacing: 1px;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        .status-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 15px 0;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .status-bar { 
+            font-size: 0.9rem; padding: 10px 25px; display: inline-flex; 
+            align-items: center; gap: 8px; backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); background: var(--glass-bg);
+            border: 1px solid var(--glass-border); border-radius: 50px;
+        }
+        #status-icon { display: none; color: var(--line-green); font-weight: bold; }
+
+        .app-container { width: 92%; max-width: 420px; text-align: center; padding-bottom: 50px; }
+
+        .emergency-grid { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; 
+        }
+        .call-card { 
+            padding: 20px 10px; text-decoration: none; color: white; 
+            border-radius: 20px; border: 1px solid var(--glass-border);
+            display: flex; flex-direction: column; gap: 5px; background: var(--glass-bg);
+        }
+        .call-card.police { background: rgba(0, 122, 255, 0.15); }
+        .call-card.ambulance { background: rgba(255, 59, 48, 0.15); }
+        .call-card b { font-size: 1.6rem; }
+
+        .main-sos-section { margin: 30px 0; }
+        .sos-btn { 
+            width: 180px; height: 180px; border-radius: 50%; 
+            background: radial-gradient(circle, #ff5e57, #d32f2f); 
+            color: white; font-size: 2.2rem; font-weight: 900; 
+            border: 8px solid rgba(255, 255, 255, 0.15); 
+            cursor: pointer; box-shadow: 0 0 50px rgba(211, 47, 47, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto; transition: 0.2s;
+        }
+        .sos-btn.active { background: white; color: var(--emergency-red); animation: pulse 0.5s infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+
+        .secondary-actions { display: flex; flex-direction: column; gap: 12px; }
+        .glass-action { 
+            padding: 18px; border: 1px solid var(--glass-border); 
+            border-radius: 16px; font-size: 1.1rem; font-weight: bold; 
+            cursor: pointer; display: flex; align-items: center; 
+            justify-content: center; gap: 12px; background: var(--glass-bg); color: white;
+        }
+        .voice-btn { color: var(--warning-yellow); }
+        .line-btn { color: var(--line-green); }
+
+        .location-panel { 
+            margin-top: 25px; padding: 15px; font-size: 0.85rem; color: #bbb;
+            border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-bg);
+        }
+
+        /* Modals Styling */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.95); z-index: 5000; 
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .modal-body { 
+            width: 100%; max-width: 450px; background: #1c1c1e; 
+            padding: 25px; border-radius: 24px; max-height: 85vh; overflow-y: auto;
+            text-align: left; border: 1px solid #333;
+        }
+        .modal-body h2 { color: var(--emergency-red); text-align: center; margin-bottom: 20px; font-size: 1.3rem; }
+        .terms-box { margin-bottom: 15px; }
+        .terms-box h3 { font-size: 0.95rem; color: var(--warning-yellow); margin-bottom: 8px; border-left: 4px solid; padding-left: 10px; }
+        .terms-box p { font-size: 0.85rem; color: #ccc; line-height: 1.5; margin: 0; }
+        
+        .check-item { 
+            display: flex; align-items: center; gap: 15px; margin-top: 10px; 
+            cursor: pointer; padding: 15px; border-radius: 12px; 
+            background: rgba(255,255,255,0.05); transition: background 0.2s;
+        }
+        .check-item:active { background: rgba(255,255,255,0.1); }
+        .check-item input { width: 24px; height: 24px; flex-shrink: 0; pointer-events: none; }
+        .check-item label { font-size: 0.9rem; color: white; font-weight: bold; pointer-events: none; line-height: 1.4; }
+
+        .agree-btn { 
+            width: 100%; padding: 20px; border: none; border-radius: 15px; 
+            font-weight: bold; font-size: 1.1rem; margin-top: 15px; cursor: pointer;
+            background: #444; color: #888; transition: 0.3s;
+        }
+        .agree-btn.active { background: var(--emergency-red); color: white; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4); }
+
+        .footer-nav { margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 0.8rem; color: #666; }
+        .footer-link { text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <button id="installBtn">📲 アプリをホーム画面に追加 (インストール)</button>
+
+    <div class="status-container">
+        <div class="status-bar">
+            <span id="status-text">読み込み完了までお待ちください...</span>
+            <span id="status-icon">✅ 準備完了</span>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <h1 style="font-size: 1.2rem; font-weight: 300; color: #eee; margin-bottom: 20px;">Japan Safety SOS Pro</h1>
+
+        <div class="emergency-grid">
+            <a href="tel:110" class="call-card police">
+                <span>警察への通報</span>
+                <b>110</b>
+            </a>
+            <a href="tel:119" class="call-card ambulance">
+                <span>救急・消防</span>
+                <b>119</b>
+            </a>
+        </div>
+
+        <div class="main-sos-section">
+            <button id="sosBtn" class="sos-btn">警報</button>
+        </div>
+
+        <div class="secondary-actions">
+            <button id="voiceBtn" class="glass-action voice-btn">📢 助けてください</button>
+            <button id="lineBtn" class="glass-action line-btn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" width="22" alt="LINE">
+                LINEで現在地を送信
+            </button>
+        </div>
+
+        <div id="locationDisplay" class="location-panel">
+            <span>📍 GPS位置情報を取得中...</span>
+        </div>
+
+        <div class="footer-nav">
+            <span class="footer-link" onclick="document.getElementById('consentModal').style.display='flex'">利用規約・免責事項</span>
+            <span class="footer-link" onclick="document.getElementById('safetyGuideModal').style.display='flex'">安全・避難ガイド</span>
+            <span class="footer-link" onclick="document.getElementById('gpsGuideModal').style.display='flex'">GPSを有効にする方法</span>
+            <span style="font-size: 0.7rem; color: #444; margin-top: 10px;">※個人による提供であり、いかなる公的機関とも提携していません。</span>
+        </div>
+    </div>
+
+    <!-- 利用規約モーダル -->
+    <div id="consentModal" class="modal-overlay">
+        <div class="modal-body">
+            <h2>利用規約・重要事項</h2>
+            
+            <div class="terms-box">
+                <h3>1. GPSと通信の必要条件</h3>
+                <p>正確な助けを呼ぶため、GPS許可とネット接続が必須です。地下、圏外、建物内では位置情報が送信されない場合があります。本アプリは補助ツールであり、安全を完全に保証するものではありません。</p>
+                <div class="check-item" onclick="toggleCheck('c1')">
+                    <input type="checkbox" class="term-check" id="c1">
+                    <label>GPSとネット環境の制限に同意します。</label>
+                </div>
+            </div>
+
+            <div class="terms-box">
+                <h3>2. LINE送信とプライバシー</h3>
+                <p>LINE送信時は現在地URLが送信されます。救助者があなたを見つけるための重要な情報です。流出を防ぐため、必ず家族など信頼できる人を送信先に選んでください。誤送信の責任はユーザーに帰属します。</p>
+                <div class="check-item" onclick="toggleCheck('c2')">
+                    <input type="checkbox" class="term-check" id="c2">
+                    <label>送信先を信頼できる人に限定することに同意します。</label>
+                </div>
+            </div>
+
+            <div class="terms-box">
+                <h3>3. 警告音と音量設定</h3>
+                <p>Bluetoothイヤホンやヘッドホンを使用していると、周囲に警告音が聞こえません。SOS使用時は必ず音量を最大にし、周囲に聞こえるようにしてください。いたずら目的の鳴動は厳禁です。</p>
+                <div class="check-item" onclick="toggleCheck('c3')">
+                    <input type="checkbox" class="term-check" id="c3">
+                    <label>音量設定とイヤホン使用時の注意を理解しました。</label>
+                </div>
+            </div>
+
+            <div class="terms-box">
+                <h3>4. 法的責任と性質</h3>
+                <p>本アプリは個人による活動であり、公的機関の代替ではありません。虚偽の通報は法律で罰せられます。18歳未満の方は保護者の指導のもとで使用してください。全ての利用は自己責任となります。</p>
+                <div class="check-item" onclick="toggleCheck('c4')">
+                    <input type="checkbox" class="term-check" id="c4">
+                    <label>本アプリが個人提供の補助ツールであることに同意します。</label>
+                </div>
+            </div>
+
+            <button id="agreeBtn" class="agree-btn" disabled>規約に同意して開始</button>
+        </div>
+    </div>
+
+    <!-- 安全・避難ガイド -->
+    <div id="safetyGuideModal" class="modal-overlay" style="display:none;">
+        <div class="modal-body">
+            <h2>安全・避難のヒント</h2>
+            <div class="terms-box">
+                <h3>🆘 緊急時の行動ガイド</h3>
+                <p>1. <b>周囲に知らせる:</b> アプリの警告音だけでなく، 大声で「助けてください！」と叫んでください。<br><br>
+                   2. <b>公共の場へ移動:</b> 人気のない場所を避け، できるだけ人が多い明るい公共の場所へ移動してください。<br><br>
+                   3. <b>当局への連絡:</b> 本アプリは補助用です。直ちに110番や119番へ直接電話し، 当局の指示に従ってください。</p>
+            </div>
+            <button class="agree-btn active" onclick="document.getElementById('safetyGuideModal').style.display='none'">閉じる</button>
+        </div>
+    </div>
+
+    <!-- دليل تفعيل GPS -->
+    <div id="gpsGuideModal" class="modal-overlay" style="display:none;">
+        <div class="modal-body">
+            <h2>GPSを有効にする方法</h2>
+            <div class="terms-box">
+                <h3>📱 iPhone (iOS)</h3>
+                <p>1. [設定] > [プライバシーとセキュリティ] > [位置情報サービス] をオンにします。<br>
+                   2. ブラウザ (Safariなど) の設定で [このサイト] の位置情報アクセスを [許可] にしてください。</p>
+                
+                <h3>🤖 Android</h3>
+                <p>1. [設定] > [位置情報] をオンにします。<br>
+                   2. ブラウザ (Chromeなど) の [サイトの設定] から位置情報の権限を許可してください。</p>
+                
+                <p style="color:var(--warning-yellow); margin-top:15px; font-weight:bold;">※地下や建物の中ではGPSが受信できない場合があります。できるだけ窓際や屋外で使用してください。</p>
+            </div>
+            <button class="agree-btn active" onclick="document.getElementById('gpsGuideModal').style.display='none'">閉じる</button>
+        </div>
+    </div>
+
+    <!-- LINE送信確認モーダル -->
+    <div id="confirmModal" class="modal-overlay" style="display:none;">
+        <div class="modal-body" style="text-align:center;">
+            <h2 style="color:var(--line-green);">LINE送信の確認</h2>
+            <p style="font-weight:bold; color:white; line-height:1.6;">位置情報(GPS)と救助要請を送信します。<br>信頼できる家族や友人が宛先であることを再確認してください。</p>
+            <p style="color:var(--warning-yellow); border:1px solid #444; padding:12px; border-radius:12px; font-size:0.85rem;">⚠️ インターネット未接続時は送信できません。</p>
+            <div style="display:flex; gap:12px; margin-top:25px;">
+                <button class="agree-btn active" style="margin:0; background:#333;" onclick="document.getElementById('confirmModal').style.display='none'">キャンセル</button>
+                <button class="agree-btn active" style="margin:0; background:var(--line-green);" onclick="executeLineSend()">OK (送信先を確認した)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isPlaying = false, audioCtx, oscillator, sirenInterval, deferredPrompt, userLocation = "";
+
+        function toggleCheck(id) {
+            const cb = document.getElementById(id);
+            cb.checked = !cb.checked;
+            validateChecks();
+        }
+
+        function validateChecks() {
+            const checks = document.querySelectorAll('.term-check');
+            const allChecked = Array.from(checks).every(c => c.checked);
+            const btn = document.getElementById('agreeBtn');
+            if (allChecked) { btn.classList.add('active'); btn.disabled = false; }
+            else { btn.classList.remove('active'); btn.disabled = true; }
+        }
+
+        if (localStorage.getItem('appConsent_v10') === 'true') {
+            document.getElementById('consentModal').style.display = 'none';
+            startTracking();
+        }
+
+        document.getElementById('agreeBtn').addEventListener('click', () => {
+            localStorage.setItem('appConsent_v10', 'true');
+            document.getElementById('consentModal').style.display = 'none';
+            startTracking();
+        });
+
+        function startTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(pos => {
+                    const { latitude: lat, longitude: lon } = pos.coords;
+                    userLocation = `https://www.google.com/maps?q=${lat},${lon}`;
+                    document.getElementById('locationDisplay').innerHTML = `📍 現在地を特定しました<br><span style="color:var(--line-green); font-size:1.1rem; font-weight:bold;">${lat.toFixed(5)}, ${lon.toFixed(5)}</span>`;
+                }, (err) => {
+                    document.getElementById('locationDisplay').innerHTML = `<span style="color:red; font-weight:bold;">⚠️ GPS許可が必要です<br><small onclick="document.getElementById('gpsGuideModal').style.display='flex'" style="text-decoration:underline; cursor:pointer; color:#888;">設定方法を見る</small></span>`;
+                }, { enableHighAccuracy: true });
+            }
+        }
+
+        document.getElementById('lineBtn').addEventListener('click', () => {
+            if (!navigator.onLine) return showMessage("❌ ネットワーク未接続です。");
+            if (!userLocation) return showMessage("❌ GPS情報を取得中です。");
+            document.getElementById('confirmModal').style.display = 'flex';
+        });
+
+        function executeLineSend() {
+            document.getElementById('confirmModal').style.display = 'none';
+            const msg = `【救助要請】Japan SOSアプリより現在地を共有しました。助けてください：\n${userLocation}`;
+            window.location.href = `line://msg/text/?${encodeURIComponent(msg)}`;
+        }
+
+        function showMessage(txt) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style = "position:fixed; bottom:120px; left:50%; transform:translateX(-50%); background:rgba(255,59,48,0.9); color:white; padding:12px 25px; border-radius:50px; z-index:9999; font-size:0.9rem; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.5);";
+            msgDiv.textContent = txt;
+            document.body.appendChild(msgDiv);
+            setTimeout(() => msgDiv.remove(), 4000);
+        }
+
+        function playSiren() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            oscillator.type = 'square';
+            oscillator.connect(gain);
+            gain.connect(audioCtx.destination);
+            oscillator.start();
+            let high = true;
+            sirenInterval = setInterval(() => {
+                oscillator.frequency.exponentialRampToValueAtTime(high ? 960 : 480, audioCtx.currentTime + 0.1);
+                high = !high;
+            }, 500);
+        }
+
+        document.getElementById('sosBtn').addEventListener('click', function() {
+            if (!isPlaying) {
+                isPlaying = true; playSiren(); this.textContent = "STOP"; this.classList.add('active');
+            } else {
+                isPlaying = false; if(oscillator) oscillator.stop(); clearInterval(sirenInterval); this.textContent = "警報"; this.classList.remove('active');
+            }
+        });
+
+        document.getElementById('voiceBtn').addEventListener('click', () => {
+            let s = new SpeechSynthesisUtterance("緊急事態です！助けてください！");
+            s.lang = 'ja-JP'; window.speechSynthesis.speak(s);
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => { if (reg.active) setStatusReady(); });
+            navigator.serviceWorker.addEventListener('message', e => { if (e.data.type === 'CACHE_SUCCESS') setStatusReady(); });
+        }
+
+        function setStatusReady() {
+            document.getElementById('status-text').style.display = 'none';
+            document.getElementById('status-icon').style.display = 'inline';
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').style.display = 'block';
+        });
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+                document.getElementById('installBtn').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+
