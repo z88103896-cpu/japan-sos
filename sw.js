@@ -34,7 +34,13 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+      // إرجاع الملف من الكاش أو محاولة جلبه من الإنترنت
+      return response || fetch(event.request).catch(() => {
+        // في حالة الفشل التام (أوفلاين أو كاش ممسوح)، أظهر الصفحة الرئيسية للطوارئ
+        if (event.request.mode === 'navigate') {
+          return caches.match('index.html');
+        }
+      });
     })
   );
 });
