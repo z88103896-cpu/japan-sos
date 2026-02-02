@@ -398,6 +398,12 @@
                 document.getElementById('installBtn').style.display = 'none';
             }
         });
+        // طلب جعل التخزين مستمراً وغير قابل للحذف التلقائي
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then(granted => {
+    if (granted) console.log("التخزين الآن مستمر ومحمي.");
+  });
+}
     </script>
 </body>
 </html>
