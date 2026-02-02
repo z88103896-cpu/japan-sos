@@ -398,6 +398,16 @@
                 document.getElementById('installBtn').style.display = 'none';
             }
         });
+
+        // طلب حماية الملفات من الحذف
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then(isPersisted => {
+    if (isPersisted) {
+      console.log("تم قفل ملفات التطبيق: لن يتم حذفها عند تنظيف الكروم");
+    }
+  });
+}
+        
         // طلب جعل التخزين مستمراً وغير قابل للحذف التلقائي
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().then(granted => {
