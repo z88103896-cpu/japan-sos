@@ -398,23 +398,67 @@
                 document.getElementById('installBtn').style.display = 'none';
             }
         });
-
-        // طلب حماية الملفات من الحذف
-if (navigator.storage && navigator.storage.persist) {
-  navigator.storage.persist().then(isPersisted => {
-    if (isPersisted) {
-      console.log("تم قفل ملفات التطبيق: لن يتم حذفها عند تنظيف الكروم");
+<script>
+    // طلب حماية التخزين من الحذف التلقائي
+    if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(granted => {
+            if (granted) console.log("✅ التخزين الآن محمي ومستمر.");
+        });
     }
-  });
-}
-        
-        // طلب جعل التخزين مستمراً وغير قابل للحذف التلقائي
-if (navigator.storage && navigator.storage.persist) {
-  navigator.storage.persist().then(granted => {
-    if (granted) console.log("التخزين الآن مستمر ومحمي.");
-  });
-}
-    </script>
+
+    let isPlaying = false, audioCtx, oscillator, sirenInterval, deferredPrompt, userLocation = "";
+
+    function playSiren() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        oscillator.type = 'square';
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start();
+        let high = true;
+        sirenInterval = setInterval(() => {
+            oscillator.frequency.exponentialRampToValueAtTime(high ? 960 : 480, audioCtx.currentTime + 0.1);
+            high = !high;
+        }, 500);
+    }
+
+    document.getElementById('sosBtn').addEventListener('click', function() {
+        if (!isPlaying) {
+            isPlaying = true; playSiren(); this.textContent = "STOP"; this.classList.add('active');
+        } else {
+            isPlaying = false; if(oscillator) oscillator.stop(); clearInterval(sirenInterval); this.textContent = "警報"; this.classList.remove('active');
+        }
+    });
+
+    document.getElementById('voiceBtn').addEventListener('click', () => {
+        let s = new SpeechSynthesisUtterance("緊急事態です！助けてください！");
+        s.lang = 'ja-JP'; window.speechSynthesis.speak(s);
+    });
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(reg => { if (reg.active) setStatusReady(); });
+    }
+
+    function setStatusReady() {
+        if(document.getElementById('status-text')) document.getElementById('status-text').style.display = 'none';
+        if(document.getElementById('status-icon')) document.getElementById('status-icon').style.display = 'inline';
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>
 
